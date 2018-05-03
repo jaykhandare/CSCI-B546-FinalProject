@@ -1,0 +1,22 @@
+resetting network interface
+----------------------------
+vim /etc/network/interfaces
+
+wifi not working
+----------------
+service network-manager restart
+
+running malta-qemu
+------------------
+qemu-system-mips -M malta -kernel vmlinux-2.6.32-5-4kc-malta -hda debian_squeeze_mips_standard.qcow2 -append "root=/dev/sda1 console=tty0" -net nic -net user,hostfwd=tcp::10022-:22
+
+accessing qemu at using filezilla
+---------------------------------
+
+Host: sftp://localhost
+username: root
+password: root
+port: 10022
+
+
+

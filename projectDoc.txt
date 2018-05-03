@@ -1,0 +1,63 @@
+Design and Implementation -
+========================+============================
+UPnP - 
+By default, UPnP feature is always on for ease of access. This feature helps a device identify and communicate with other devices in the network range which is a very serious issue. To avoid such a security risk, this feature is ommitted from business grade devices, but it is still there in commercial devices like SOHO routers. To handle this problem, we could restrict the access to this feature and provide a web-interface which will require admin access to make the connection. This doesn't solve the actual problem, but restricts it.
+Basically, the modules are available which are loaded whenever the router system boots and mostly these modules are loaded by default. So to avoid this problem, we have provided some scripts which will load the required module for a specific time (420 seconds[7Mins]) when admin asks to and after this time period, these modules are unloaded. Without loading these modules, no external device can use UPnP feature.
+
+not knowing about firmware updates-
+The firmware updates or patches provided by the manufacturer are not very regular. Mostly the updates are provided only if some researchers have found some issues in the device. Here, we cannot blame the manufacturer for the delay, because to provide an update first you need to find the faults in the existing system. Going further, even if the firware updates are available the end users are unaware of it and hence, the update is not performed. To tackle this case, in our implementation we have added a checkpoint where the router checks the specified location for an update after a fixed period and sets the flag which indicates that a new update is available. If the ROM has the device has enough space for downloading and storing the update it does so and in the next reboot session, it performs the update. SOHO routers are used in offices and homes where it is possible to have a computer with wired connection. We could set up a messaging service and notify user about such a case. 
+
+HNAP -
+This concept and its implementation can be considered as a feature for the service providers and manufacturers and a vulnerability to users. On the manufacturer side, using this mechanism provides accurate topology discovery, custom task extensibility and other advantages to keep track and provide customer support. On the consumer side, it helps in troubleshooting if some configuration has gone awry. Also, not just manufacturers are able to keep track using this, any adversary can exploit to this functionality and cause some serious issues. So instead of keeping the HNAP server running all the time, it would be beneficial if we could somehow make this user dependent. So that, whenever the user needs some help from the manufacturer / service provider regarding troubleshooting, he could activate this from the web-interface.
+
+weak passwords - 
+On all the commercial routers, the admin user account is set up by default. The values are hardcoded into the system. To tackle this problem, there is not much we can do. The ideal case would be to use dual authentication or begin with a strong password. According to some researches, dual authentication is possible but will be expensive as a whole new system would be required to satisfy the needs. The manufacturers will not be willing to go through the whole deal. Anyhow, most of the users don't visit the webpage of server configuration that much, hence this will be kind of a waste of money. Alternatively, the other method would be less expensive and one time thing, hence end-users would try this. The second method we are proposing is to put a strong password defined by user at the first use. So ideally, when the router is setup at user's place, before any-communication takes place, the user would be required to setup a strong password without which the router won't connect to the internet. This initial setup will be mandatory and one-time thing. Before this setup, only local communication(intra-network) will be active.
+
+openssl -
+For most of the times when manufacturer releases a new update or a patch, this issue somehow manages to remain uncatered. In 2017, researchers found 'the heartbleed bug' which when exploited allows the adversary to get access to secret keys used for certificates, usernames and passwords without leaving a trace. Fortunately, OpenSSL has fixed this bug and released a new version of the software. Also, CherryTree project exploits running instances of openssl which are there on any commercial router to setup the flytrap and Cherry Blossom mechanism. This mechanism allows them to monitor data traffic, and credentials. The best option to address this issue is to restrict the OpenSSL server, so that only the local network can access it. We can also provide the user with an option in the webpage of router settings to start or stop it based on the requirement. This won't affect the devices connected to the router. Hence, if some device wants to use it, they can utilize this functionality. But only admin will be able to turn it on or off for the router.
+
+Restricting Busybox -
+This utility is tauted as the swiss army knife of embedded linux. It provides a lot of Unix utilities which are used by various processes for example: mkdir, sendmail, chroot, ftpput, etc. The number of utilities provided through busybox is continuosly increasing as the time goes by. This constant evolution possesses a threat in disguise because some of them are not needed for functioning of the devices but are provided nonetheless. Basically nobody takes the trouble to cut out the unnecessary utilities. Some of the firmwares we studied had kept in mind this mistake and hence, added only yhe required modules while compiling their busybox. Hence, their builds were light. On the other hand, most of the firmware architectures don't think about this factor carefully and create heavy builds. This practice needs to be avoided. 
+
+Incoherence in server architecture -
+
+Evaluation
+=========================+===========================
+Out of the 7 methods mentioned in the previous section, we were able to successfully emulate 3 methods using the Qemu emulator. We couldn't make a head-way because to test some methods like HNAP, etc. because for that multiple devices should be connected to router which was not possible for us with Qemu.
+
+The setup for insuring a strong admin password is feasible, but due to lack of time we were not able to finish the required scripts for that.
+
+Keeping track of the newly released updates and patches proved to be a tough one. There is no fix location where we can get this information and also keeping track of the empty space available and utilizing it is a tough thing to emulate. We started with 1.0 version of XXX router firmware and by running our partial script, we downloaded the update. The procedure after that is complex and hence time consuming. That's why we were not able to get it done with.
+
+Restricting busybox is not that much of the trouble. The source code of busybox is public and compiling it is very easy. The only important task in this procedure is to sort through various packages available and decide which to include. Some of these packages are important to general functioning of the router and hence, should be added no matter what. If the manufacturers come up with a list to do this based on their specific model, it would be very helpful. Now they don't have something like this. One the router architecture we studied had a busybox executable of size 4 MB which is just too much. On the other hand, on the basis of our elementary studies we created and used a busybox executable of 300 kB which provided basic functionalities.
+
+Following are the statistics related to size of various busyboxes used by different firware architectures:
+
+
+
+Though the incoherancy of the server architecture should be addressed someday, we do not see it happening anyday soon. It will require a lot of work from manufacturers. As this work will require a convention to follow, that convention needs to be defined first. So anyhow, it is a long way from realizing anytime soon.
+
+Although Qemu can be considered as a perfect emulator, our understanding of it is limited. So we created the scripts and executed them manually for UPnP and OpenSSL and verified the differences in the running processes on the router to analyze the results. 
+
+The script we came up with takes care of the OpenSSL problem and restricts the access[except for localhost]. Although the execution was manual, it does the job and can be incorporate in any server architecture. It can also be modified to block all the communication as well. There were some problems with the execution if 'sshd' is already running. Hence, sometimes we need to stop the daemon first and them run the script.
+
+There are some processes on router which take care of UPnP feature. The modules are loaded at the time of initiation. The code for that is usually located in /etc/init.d/rcS or /etc/rc.d/rcS depending on the architecture. 
+
+To include our scripts in a fully functional router, all we need to include them in the init scripts mentioned above and then provide some interface on webpages to toggle the switches which execute the reverse scripts. Although adding the scripts is very easy and can be done by changing only a few lines, adding interface to provide the toggle switch is kind of difficult, because of the varieties available in the server and becomes difficult to keep track. In our implementation, we were able to provide such a switch in a server which used PHP.
+
+
+Conclusion
+=========================+===========================
+Although we were successfull in securing issues related to busybox, OpenSSL, and UPnP, the study we conducted was not able to be conclusive about all the proposed ideas due to lack of time, and understanding of the embedded architecture. We came to know about the incoherence in server architectures which is a problem if you are not familiar with them. Also it makes automation difficult and more time consuming. If someone could standardize the server architecture used by router firmwares, it would be a very good initiative. 
+
+Secondly, it is apparent from the various types and functionalities provided by various busyboxes that manufacturers don't spend much of the time in devising / compiling their versions of it. They don't have to add all the available Unix utilities, instead they should just add what is required and nothing more.
+
+Thirdly, our initial plan of using dual authentication mechanism is feasible but impractical since it requires a whole new system to be devised and maintained by the manufacturers. As this system is going to be expensive to maintain, none of the manufacturers will opt for it. Our alternative to cater to this problem is feasible and not expensive. It only requires to create a couple of new modules and incorporate them in the existing framework.
+
+We studied various versions of various architectures. The updates usually are provided if some major threats are found by researchers and published in the media. While the fixes are provided for only high risk threats, all moderate to low risk issues just remain unattended. For example: HNAP bug and OpenSSL(heartbleed bug) issues came to limelight around the same time, manufacturers and OpenSSL took it seriously and provided a fix within months. On the other hand, some manufacturers provided fixes for some of their devices 2 years later. Most of their devices are still vulnerable. This issue needs to be addressed more firmly. 
+
+
+Future Research Plan
+=========================+===========================
+
+
